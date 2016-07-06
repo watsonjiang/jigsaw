@@ -3,6 +3,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import random
+import cairo
 
 class ImageHandler:
    n_w = 4
@@ -74,16 +75,20 @@ class MainFrame:
       i_y = int(event.y) / self.ih.get_i_h()
       if self.selected == None:
          self.selected = (i_x, i_y) 
-         gc = widget.style.white_gc
          x = i_x * self.ih.get_i_w()
          y = i_y * self.ih.get_i_h()
-         self.pixmap.draw_rectangle(gc, False, x, y, self.ih.get_i_w(), self.ih.get_i_h())
+         cr = cairo.Context(self.img)
+         cr.set_source_rgb(1, 1, 1)
+         cr.rectangle(x, y, self.ih.get_i_w(), self.ih.get_i_h())
+         cr.stroke()
       else:
          idx1 = i_x + i_y * self.ih.n_h
          idx2 = self.selected[0] + self.selected[1] * self.ih.n_h
          self.ih.swap(idx1, idx2)
-         gc = widget.style.white_gc
-         self.pixmap.draw_pixbuf(gc, self.ih.get_img(), 0, 0, 0, 0)
+         cr = cairo.Context(self.img)
+         gtkcr = gtk.gdk.CairoContext(cr)
+         gtkcr.set_source_pixbuf(self.ih.get_img(), 0, 0)
+         cr.paint()
          self.selected = None
       
       widget.queue_draw_area(0, 0, 600, 600) 
@@ -97,15 +102,17 @@ class MainFrame:
       dlg.run()
       dlg.destroy() 
       self.load_image()
-      gc = widget.style.white_gc
-      self.pixmap.draw_pixbuf(gc, self.ih.get_img(), 0, 0, 0, 0)
+      cr = cairo.Context(self.img)
+      gtkcr = gtk.gdk.CairoContext(cr)
+      gtkcr.set_source_pixbuf(self.ih.get_img(), 0, 0)
+      cr.paint()
       widget.queue_draw_area(0, 0, 600, 600) 
 
-
    def on_draw(self, widget, event):
-      gc = widget.style.white_gc
-      x, y, w, h = event.area
-      widget.window.draw_drawable(gc, self.pixmap, x, y, x, y, w, h)
+      cr = widget.window.cairo_create()
+      cr.set_source_surface(self.img, 0, 0)
+      cr.set_source_rgba(1.0, 1.0, 1.0, 0.0)
+      cr.paint()
 
    def load_image(self):
       #files = ['car.jpg', 'truck.png']
@@ -127,9 +134,11 @@ class MainFrame:
       self.window.add(self.darea)
       self.window.show_all()
       self.load_image()
-      self.pixmap = gtk.gdk.Pixmap(self.window.window, 600, 600)
-      gc = self.window.style.white_gc
-      self.pixmap.draw_pixbuf(gc, self.ih.get_img(), 0, 0, 0, 0)
+      self.img = cairo.ImageSurface(cairo.FORMAT_ARGB32, 600, 600)
+      cr = cairo.Context(self.img)
+      gtkcr = gtk.gdk.CairoContext(cr) 
+      gtkcr.set_source_pixbuf(self.ih.get_img(), 0, 0)
+      gtkcr.paint()
       self.selected = None 
 
 
